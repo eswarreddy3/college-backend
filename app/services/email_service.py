@@ -32,6 +32,29 @@ def send_activation_email(admin_email: str, admin_name: str, college_name: str, 
         current_app.logger.error(f"Failed to send activation email to {admin_email}: {e}")
 
 
+def send_reminder_email(student_email: str, student_name: str):
+    frontend_url = current_app.config['FRONTEND_URL']
+    msg = Message(
+        subject="Don't lose your streak — Fynity",
+        recipients=[student_email],
+    )
+    msg.html = f"""
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #00D4C8;">Hey {student_name}, we miss you!</h2>
+      <p>You haven't logged in for a few days. Jump back in to keep your streak alive and stay ahead of your peers.</p>
+      <a href="{frontend_url}/dashboard"
+         style="display:inline-block;padding:12px 24px;background:#00D4C8;color:#000;
+                text-decoration:none;border-radius:6px;font-weight:bold;">
+        Resume Learning
+      </a>
+    </div>
+    """
+    try:
+        mail.send(msg)
+    except Exception as e:
+        current_app.logger.error(f"Failed to send reminder email to {student_email}: {e}")
+
+
 def send_student_welcome_email(student_email: str, student_name: str, temp_password: str):
     frontend_url = current_app.config['FRONTEND_URL']
 
