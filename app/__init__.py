@@ -23,7 +23,7 @@ def create_app(config_name: str = None) -> Flask:
 
     # Import models so SQLAlchemy knows about them
     with app.app_context():
-        from app.models import College, User, Package, RefreshToken, CodingProblem, CodingSubmission, ActivityLog  # noqa
+        from app.models import College, User, Package, RefreshToken, CodingProblem, CodingSubmission, ActivityLog, MCQQuestion, MCQAttempt  # noqa
 
     # Register blueprints
     from app.routes.auth import auth_bp
@@ -31,12 +31,14 @@ def create_app(config_name: str = None) -> Flask:
     from app.routes.admin import admin_bp
     from app.routes.super_admin import super_admin_bp
     from app.routes.coding import coding_bp
+    from app.routes.mcq import mcq_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(student_bp, url_prefix='/api/student')
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
     app.register_blueprint(super_admin_bp, url_prefix='/api/super-admin')
     app.register_blueprint(coding_bp, url_prefix='/api/coding')
+    app.register_blueprint(mcq_bp, url_prefix='/api/mcq')
 
     # Health check
     @app.get('/api/health')

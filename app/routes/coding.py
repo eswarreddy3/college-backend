@@ -31,6 +31,20 @@ def get_problem(slug):
     return jsonify(problem.to_dict(include_test_cases=False)), 200
 
 
+@coding_bp.get('/problems/<slug>/submissions')
+@jwt_required
+def get_submissions(slug):
+    problem = CodingProblem.query.filter_by(slug=slug, is_active=True).first_or_404()
+    submissions = (
+        CodingSubmission.query
+        .filter_by(user_id=g.current_user.id, problem_id=problem.id)
+        .order_by(CodingSubmission.submitted_at.desc())
+        .limit(20)
+        .all()
+    )
+    return jsonify([s.to_dict() for s in submissions]), 200
+
+
 @coding_bp.post('/run')
 @jwt_required
 def run_code():
