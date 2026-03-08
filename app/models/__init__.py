@@ -7,6 +7,10 @@ from .activity_log import ActivityLog
 from .mcq import MCQQuestion, MCQAttempt
 from .learn import Course, Lesson, UserLessonProgress
 from .assignment import AssignmentQuestion, AssignmentAttempt
+from .company_prep import (
+    Company, CompanyHiringRound, CompanyPackage,
+    CompanyAptitudeQuestion, CompanyCodingQuestion, CompanyTip
+)
 
 __all__ = [
     'College', 'User', 'Package', 'RefreshToken',
@@ -14,4 +18,6 @@ __all__ = [
     'MCQQuestion', 'MCQAttempt',
     'Course', 'Lesson', 'UserLessonProgress',
     'AssignmentQuestion', 'AssignmentAttempt',
+    'Company', 'CompanyHiringRound', 'CompanyPackage',
+    'CompanyAptitudeQuestion', 'CompanyCodingQuestion', 'CompanyTip',
 ]
