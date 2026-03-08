@@ -15,6 +15,7 @@ class CodingProblem(db.Model):
     constraints = db.Column(db.Text, nullable=True)
     starter_code = db.Column(db.JSON, default=dict)  # {python: "...", java: "..."}
     test_cases = db.Column(db.JSON, default=list)
+    points = db.Column(db.Integer, default=10)       # points awarded on first accepted submission
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
@@ -31,6 +32,7 @@ class CodingProblem(db.Model):
             'examples': self.examples or [],
             'constraints': self.constraints,
             'starter_code': self.starter_code or {},
+            'points': self.points or 10,
         }
         if include_test_cases:
             data['test_cases'] = self.test_cases or []
