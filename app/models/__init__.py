@@ -12,6 +12,7 @@ from .company_prep import (
     CompanyAptitudeQuestion, CompanyCodingQuestion, CompanyTip
 )
 from .domain import Domain, DomainCourse
+from .feed import Post, PostLike, Comment, CommentLike
 
 __all__ = [
     'College', 'User', 'Package', 'RefreshToken',
@@ -22,4 +23,5 @@ __all__ = [
     'Company', 'CompanyHiringRound', 'CompanyPackage',
     'CompanyAptitudeQuestion', 'CompanyCodingQuestion', 'CompanyTip',
     'Domain', 'DomainCourse',
+    'Post', 'PostLike', 'Comment', 'CommentLike',
 ]
