@@ -23,7 +23,7 @@ def create_app(config_name: str = None) -> Flask:
 
     # Import models so SQLAlchemy knows about them
     with app.app_context():
-        from app.models import College, User, Package, RefreshToken, CodingProblem, CodingSubmission, ActivityLog, MCQQuestion, MCQAttempt, Course, Lesson, UserLessonProgress, AssignmentQuestion, AssignmentAttempt, Company, CompanyHiringRound, CompanyPackage, CompanyAptitudeQuestion, CompanyCodingQuestion, CompanyTip  # noqa
+        from app.models import College, User, Package, RefreshToken, CodingProblem, CodingSubmission, ActivityLog, MCQQuestion, MCQAttempt, Course, Lesson, UserLessonProgress, AssignmentQuestion, AssignmentAttempt, Company, CompanyHiringRound, CompanyPackage, CompanyAptitudeQuestion, CompanyCodingQuestion, CompanyTip, Domain, DomainCourse  # noqa
 
     # Register blueprints
     from app.routes.auth import auth_bp
@@ -35,6 +35,7 @@ def create_app(config_name: str = None) -> Flask:
     from app.routes.learn import learn_bp
     from app.routes.assignments import assignments_bp
     from app.routes.company_prep import company_prep_bp
+    from app.routes.domain_programs import domain_programs_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(student_bp, url_prefix='/api/student')
@@ -45,6 +46,7 @@ def create_app(config_name: str = None) -> Flask:
     app.register_blueprint(learn_bp, url_prefix='/api/learn')
     app.register_blueprint(assignments_bp, url_prefix='/api/assignments')
     app.register_blueprint(company_prep_bp, url_prefix='/api/company-prep')
+    app.register_blueprint(domain_programs_bp, url_prefix='/api/domain-programs')
 
     # Health check
     @app.get('/api/health')

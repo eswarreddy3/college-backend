@@ -11,6 +11,7 @@ from .company_prep import (
     Company, CompanyHiringRound, CompanyPackage,
     CompanyAptitudeQuestion, CompanyCodingQuestion, CompanyTip
 )
+from .domain import Domain, DomainCourse
 
 __all__ = [
     'College', 'User', 'Package', 'RefreshToken',
@@ -20,4 +21,5 @@ __all__ = [
     'AssignmentQuestion', 'AssignmentAttempt',
     'Company', 'CompanyHiringRound', 'CompanyPackage',
     'CompanyAptitudeQuestion', 'CompanyCodingQuestion', 'CompanyTip',
+    'Domain', 'DomainCourse',
 ]
