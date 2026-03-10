@@ -35,6 +35,17 @@ with app.app_context():
             order=1,
         ),
         Domain(
+            id='data-analysis',
+            title='Data Analysis',
+            description='Learn to collect, clean, analyse, and visualise data to extract actionable business insights.',
+            icon='BarChart2',
+            icon_color='text-emerald-400',
+            bg_color='bg-emerald-400/20',
+            skills=['Python', 'SQL', 'Data Visualisation', 'Statistics'],
+            is_active=True,
+            order=2,
+        ),
+        Domain(
             id='machine-learning',
             title='Machine Learning',
             description='Learn supervised, unsupervised, and deep learning — from maths fundamentals to production.',
@@ -80,6 +91,11 @@ with app.app_context():
         ('data-science', 'python',       1),
         ('data-science', 'sql',          2),
         ('data-science', 'data-science', 3),
+
+        # Data Analysis: uses python, sql, quantitative
+        ('data-analysis', 'python',       1),
+        ('data-analysis', 'sql',          2),
+        ('data-analysis', 'quantitative', 3),
 
         # Machine Learning: uses python, data-science
         ('machine-learning', 'python',       1),

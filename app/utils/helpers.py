@@ -1,7 +1,7 @@
 import bcrypt
 import jwt
 import secrets
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date, timedelta
 from flask import current_app
 
 
@@ -47,3 +47,36 @@ def decode_token(token: str) -> dict:
 
 def generate_activation_token() -> str:
     return secrets.token_urlsafe(32)
+
+
+def update_streak(user_id: int) -> None:
+    """Call after any user activity. Updates current/longest streak in user_streaks table."""
+    from app.models.streak import UserStreak
+    from app.extensions import db
+
+    today = datetime.now(timezone.utc).date()
+
+    row = UserStreak.query.filter_by(user_id=user_id).first()
+    if row is None:
+        db.session.add(UserStreak(
+            user_id=user_id,
+            current_streak=1,
+            longest_streak=1,
+            last_activity_date=today,
+            updated_at=datetime.now(timezone.utc),
+        ))
+        return
+
+    if row.last_activity_date == today:
+        return  # already counted today
+
+    if row.last_activity_date == today - timedelta(days=1):
+        row.current_streak += 1
+    else:
+        row.current_streak = 1
+
+    if row.current_streak > row.longest_streak:
+        row.longest_streak = row.current_streak
+
+    row.last_activity_date = today
+    row.updated_at = datetime.now(timezone.utc)

@@ -5,6 +5,7 @@ from app.models.refresh_token import RefreshToken
 from app.utils.helpers import (
     verify_password, hash_password,
     generate_access_token, generate_refresh_token, decode_token,
+    update_streak,
 )
 from app.utils.decorators import jwt_required
 from datetime import datetime, timezone
@@ -35,8 +36,9 @@ def login():
     rt = RefreshToken(user_id=user.id, token=refresh_token_str, expires_at=expires_at)
     db.session.add(rt)
 
-    # Update last_active
+    # Update last_active and streak
     user.last_active = datetime.now(timezone.utc)
+    update_streak(user.id)
     db.session.commit()
 
     return jsonify({

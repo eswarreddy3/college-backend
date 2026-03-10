@@ -3,6 +3,7 @@ from app.extensions import db
 from app.models.learn import Course, Lesson, UserLessonProgress
 from app.models.activity_log import ActivityLog
 from app.utils.decorators import jwt_required
+from app.utils.helpers import update_streak
 
 learn_bp = Blueprint('learn', __name__)
 
@@ -103,6 +104,7 @@ def complete_lesson(lesson_id):
         details={'description': lesson.course.title, 'points': lesson.points},
     )
     db.session.add(log)
+    update_streak(user.id)
     db.session.commit()
 
     return jsonify({

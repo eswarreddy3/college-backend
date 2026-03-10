@@ -3,6 +3,7 @@ from app.extensions import db
 from app.models.mcq import MCQQuestion, MCQAttempt
 from app.models.activity_log import ActivityLog
 from app.utils.decorators import jwt_required
+from app.utils.helpers import update_streak
 
 mcq_bp = Blueprint('mcq', __name__)
 
@@ -155,6 +156,7 @@ def submit_answer():
             )
             db.session.add(log)
 
+    update_streak(user.id)
     db.session.commit()
 
     return jsonify({

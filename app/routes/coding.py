@@ -3,6 +3,7 @@ from app.extensions import db
 from app.models.coding_problem import CodingProblem, CodingSubmission
 from app.models.activity_log import ActivityLog
 from app.utils.decorators import jwt_required
+from app.utils.helpers import update_streak
 from app.utils.executor import execute, run_test_cases
 from datetime import datetime, timezone
 
@@ -157,6 +158,7 @@ def submit_code():
             )
             db.session.add(log)
 
+    update_streak(user.id)
     db.session.commit()
 
     points_awarded = 0

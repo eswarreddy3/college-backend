@@ -7,7 +7,8 @@ class Package(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
-    price = db.Column(db.Numeric(10, 2), default=0)
+    plan_type = db.Column(db.String(20), nullable=False, default='free')  # free|base|pro|enterprise
+    price = db.Column(db.Numeric(10, 2), default=0)  # price per student per year (0 = free/custom)
     features = db.Column(db.JSON, default=list)
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
@@ -16,6 +17,7 @@ class Package(db.Model):
         return {
             'id': self.id,
             'name': self.name,
+            'plan_type': self.plan_type,
             'price': float(self.price),
             'features': self.features or [],
             'is_active': self.is_active,

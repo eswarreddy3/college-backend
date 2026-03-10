@@ -4,6 +4,7 @@ from app.extensions import db
 from app.models.user import User
 from app.models.activity_log import ActivityLog
 from app.models.coding_problem import CodingSubmission
+from app.models.streak import UserStreak
 from app.utils.decorators import role_required, jwt_required
 from app.utils.helpers import hash_password, verify_password
 
@@ -73,6 +74,11 @@ def dashboard():
         .all()
     )
 
+    # Streak from user_streaks table
+    streak_row = UserStreak.query.filter_by(user_id=user.id).first()
+    current_streak = streak_row.current_streak if streak_row else 0
+    longest_streak = streak_row.longest_streak if streak_row else 0
+
     # Active days this month (for streak calendar)
     now = datetime.now(timezone.utc)
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -81,17 +87,16 @@ def dashboard():
         .filter(ActivityLog.user_id == user.id, ActivityLog.created_at >= month_start)
         .all()
     )
-    active_days = list(set(
-        log.created_at.day for log in monthly_logs
-    ))
+    active_days = sorted(set(log.created_at.day for log in monthly_logs))
 
     return jsonify({
         'points': user.points,
-        'streak': user.streak,
+        'streak': current_streak,
+        'longest_streak': longest_streak,
         'rank': rank,
         'total_in_college': total_in_college,
         'solved_count': solved_count,
-        'active_days': sorted(active_days),
+        'active_days': active_days,
         'recent_activity': [a.to_dict() for a in recent_activity],
     }), 200
 
