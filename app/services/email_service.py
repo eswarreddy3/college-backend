@@ -30,6 +30,8 @@ def send_activation_email(admin_email: str, admin_name: str, college_name: str, 
         mail.send(msg)
     except Exception as e:
         current_app.logger.error(f"Failed to send activation email to {admin_email}: {e}")
+        return False
+    return True
 
 
 def send_reminder_email(student_email: str, student_name: str):
@@ -53,6 +55,8 @@ def send_reminder_email(student_email: str, student_name: str):
         mail.send(msg)
     except Exception as e:
         current_app.logger.error(f"Failed to send reminder email to {student_email}: {e}")
+        return False
+    return True
 
 
 def send_student_welcome_email(student_email: str, student_name: str, temp_password: str):
@@ -83,3 +87,5 @@ def send_student_welcome_email(student_email: str, student_name: str, temp_passw
         mail.send(msg)
     except Exception as e:
         current_app.logger.error(f"Failed to send welcome email to {student_email}: {e}")
+        return False
+    return True

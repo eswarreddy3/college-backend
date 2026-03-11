@@ -9,6 +9,8 @@ class College(db.Model):
     name = db.Column(db.String(255), nullable=False)
     location = db.Column(db.String(255))
     package_id = db.Column(db.Integer, db.ForeignKey('packages.id'), nullable=True)
+    allowed_domain_ids = db.Column(db.JSON, nullable=True)   # None = all domains accessible
+    allowed_course_ids = db.Column(db.JSON, nullable=True)   # None = all courses accessible
     is_active = db.Column(db.Boolean, default=True)
     activation_token = db.Column(db.String(255), unique=True, nullable=True)
     activated_at = db.Column(db.DateTime, nullable=True)
@@ -24,6 +26,9 @@ class College(db.Model):
             'location': self.location,
             'package_id': self.package_id,
             'package': self.package.name if self.package else None,
+            'plan_type': self.package.plan_type if self.package else None,
+            'allowed_domain_ids': self.allowed_domain_ids,
+            'allowed_course_ids': self.allowed_course_ids,
             'is_active': self.is_active,
             'activated_at': self.activated_at.isoformat() if self.activated_at else None,
             'student_count': len([u for u in self.users if u.role == 'student']),

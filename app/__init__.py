@@ -15,11 +15,13 @@ def create_app(config_name: str = None) -> Flask:
     db.init_app(app)
     migrate.init_app(app, db)
     mail.init_app(app)
-    cors.init_app(app, resources={r'/api/*': {
-        'origins': '*',
-        'allow_headers': ['Authorization', 'Content-Type'],
-        'methods': ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    }})
+    cors.init_app(
+        app,
+        origins='*',
+        allow_headers=['Authorization', 'Content-Type'],
+        methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+        supports_credentials=False,
+    )
 
     # Import models so SQLAlchemy knows about them
     with app.app_context():
@@ -50,6 +52,27 @@ def create_app(config_name: str = None) -> Flask:
     app.register_blueprint(company_prep_bp, url_prefix='/api/company-prep')
     app.register_blueprint(domain_programs_bp, url_prefix='/api/domain-programs')
     app.register_blueprint(feed_bp, url_prefix='/api/feed')
+
+    # Ensure CORS headers are present even on unhandled error responses.
+    # Flask's default error handler bypasses after_request hooks, so
+    # Flask-CORS never gets a chance to inject the header — browsers then
+    # report a CORS error that masks the real 4xx/5xx problem.
+    @app.after_request
+    def _add_cors_on_error(response):
+        response.headers.setdefault('Access-Control-Allow-Origin', '*')
+        response.headers.setdefault('Access-Control-Allow-Headers', 'Authorization, Content-Type')
+        response.headers.setdefault('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
+        return response
+
+    @app.errorhandler(Exception)
+    def _handle_unhandled(e):
+        from flask import jsonify as _jsonify
+        import traceback
+        app.logger.error(traceback.format_exc())
+        response = _jsonify({'error': 'Internal server error', 'detail': str(e)})
+        response.status_code = 500
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        return response
 
     # Health check
     @app.get('/api/health')

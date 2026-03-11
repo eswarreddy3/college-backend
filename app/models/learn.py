@@ -23,7 +23,7 @@ class Course(db.Model):
     def total_lessons(self):
         return len([l for l in self.lessons if l.is_active])
 
-    def to_dict(self, lessons_completed=0, is_locked=False):
+    def to_dict(self, lessons_completed=0, is_locked=False, lock_reason=None):
         return {
             'id': self.id,
             'title': self.title,
@@ -37,6 +37,7 @@ class Course(db.Model):
             'total_lessons': self.total_lessons(),
             'lessons_completed': lessons_completed,
             'is_locked': is_locked,
+            'lock_reason': lock_reason,  # 'plan' | 'prerequisite' | None
         }
 
 

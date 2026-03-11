@@ -10,9 +10,19 @@ domain_programs_bp = Blueprint('domain_programs', __name__)
 @domain_programs_bp.get('/')
 @jwt_required
 def list_domains():
-    """Return all active domains with summary stats."""
+    """Return all active domains with summary stats. Marks locked domains based on college's allowed_domain_ids."""
     domains = Domain.query.filter_by(is_active=True).order_by(Domain.order).all()
-    return jsonify([d.to_dict() for d in domains]), 200
+
+    college = g.current_user.college
+    allowed_ids = college.allowed_domain_ids if college else None  # None = all accessible
+
+    result = []
+    for d in domains:
+        d_dict = d.to_dict()
+        d_dict['is_locked'] = bool(allowed_ids is not None and d.id not in allowed_ids)
+        result.append(d_dict)
+
+    return jsonify(result), 200
 
 
 @domain_programs_bp.get('/<domain_id>/courses')
@@ -22,6 +32,11 @@ def get_domain_courses(domain_id):
     domain = Domain.query.filter_by(id=domain_id, is_active=True).first()
     if not domain:
         return jsonify({'error': 'Domain not found'}), 404
+
+    college = g.current_user.college
+    allowed_ids = college.allowed_domain_ids if college else None
+    if allowed_ids is not None and domain_id not in allowed_ids:
+        return jsonify({'error': 'This domain is not available in your college plan'}), 403
 
     user_id = g.current_user.id
 

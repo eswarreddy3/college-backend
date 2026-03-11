@@ -30,6 +30,9 @@ def login():
     if not user.is_active:
         return jsonify({'error': 'Account is inactive. Contact your administrator.'}), 403
 
+    if user.college and not user.college.is_active:
+        return jsonify({'error': 'Your college account has been deactivated. Contact the platform administrator.'}), 403
+
     access_token = generate_access_token(user.id, user.role)
     refresh_token_str, expires_at = generate_refresh_token(user.id)
 

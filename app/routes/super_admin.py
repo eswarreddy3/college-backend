@@ -1,6 +1,7 @@
 import os
 from flask import Blueprint, request, jsonify, g, current_app
 from werkzeug.utils import secure_filename
+from sqlalchemy import text
 from app.extensions import db
 from app.models.college import College
 from app.models.user import User
@@ -17,6 +18,56 @@ ALLOWED_EXTENSIONS = {'csv', 'xlsx', 'xls'}
 
 def _allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def _purge_user_records(user_id):
+    """Delete all FK-constrained rows referencing a user before deleting the user row.
+    MySQL doesn't allow self-referencing subqueries directly, so subqueries are
+    wrapped in an extra derived table alias to work around that restriction."""
+    uid = {"uid": user_id}
+
+    db.session.execute(text("DELETE FROM user_streaks WHERE user_id = :uid"), uid)
+    db.session.execute(text("DELETE FROM user_lesson_progress WHERE user_id = :uid"), uid)
+    db.session.execute(text("DELETE FROM mcq_attempts WHERE user_id = :uid"), uid)
+    db.session.execute(text("DELETE FROM assignment_attempts WHERE user_id = :uid"), uid)
+    db.session.execute(text("DELETE FROM coding_submissions WHERE user_id = :uid"), uid)
+
+    # Likes this user gave (on any comment)
+    db.session.execute(text("DELETE FROM comment_likes WHERE user_id = :uid"), uid)
+    # Likes this user gave (on any post)
+    db.session.execute(text("DELETE FROM post_likes WHERE user_id = :uid"), uid)
+
+    # Posts owned by this user — clear comments + likes on those posts first
+    db.session.execute(text(
+        "DELETE FROM comment_likes WHERE comment_id IN "
+        "(SELECT id FROM (SELECT id FROM comments "
+        " WHERE post_id IN (SELECT id FROM (SELECT id FROM posts WHERE user_id = :uid) AS p)) AS c)"
+    ), uid)
+    db.session.execute(text(
+        "DELETE FROM comments WHERE post_id IN "
+        "(SELECT id FROM (SELECT id FROM posts WHERE user_id = :uid) AS sub)"
+    ), uid)
+    db.session.execute(text(
+        "DELETE FROM post_likes WHERE post_id IN "
+        "(SELECT id FROM (SELECT id FROM posts WHERE user_id = :uid) AS sub)"
+    ), uid)
+    db.session.execute(text("DELETE FROM posts WHERE user_id = :uid"), uid)
+
+    # Comments by this user on other posts —
+    # nullify replies that point to their comments, then remove likes, then remove comments
+    db.session.execute(text(
+        "UPDATE comments SET parent_id = NULL WHERE parent_id IN "
+        "(SELECT id FROM (SELECT id FROM comments WHERE user_id = :uid) AS sub)"
+    ), uid)
+    db.session.execute(text(
+        "DELETE FROM comment_likes WHERE comment_id IN "
+        "(SELECT id FROM (SELECT id FROM comments WHERE user_id = :uid) AS sub)"
+    ), uid)
+    db.session.execute(text("DELETE FROM comments WHERE user_id = :uid"), uid)
+
+    # Cascade-handled by ORM but explicit for safety
+    db.session.execute(text("DELETE FROM refresh_tokens WHERE user_id = :uid"), uid)
+    db.session.execute(text("DELETE FROM activity_logs WHERE user_id = :uid"), uid)
 
 
 # --- Colleges ---
@@ -63,10 +114,18 @@ def create_college():
 
     activation_token = generate_activation_token()
 
+    raw = data.get('allowed_domain_ids')
+    allowed_domain_ids = raw if isinstance(raw, list) else None
+
+    raw_c = data.get('allowed_course_ids')
+    allowed_course_ids = raw_c if isinstance(raw_c, list) else None
+
     college = College(
         name=data['college_name'].strip(),
         location=data.get('location', '').strip(),
         package_id=data.get('package_id') or None,
+        allowed_domain_ids=allowed_domain_ids,
+        allowed_course_ids=allowed_course_ids,
         activation_token=activation_token,
         is_active=False,
     )
@@ -85,9 +144,14 @@ def create_college():
     db.session.add(admin)
     db.session.commit()
 
-    send_activation_email(admin.email, admin.name, college.name, activation_token)
+    sent = send_activation_email(admin.email, admin.name, college.name, activation_token)
+    email_warning = None if sent else "College created but activation email could not be sent. Use Resend Activation."
 
-    return jsonify({'message': 'College created. Activation email sent.', 'college': college.to_dict()}), 201
+    return jsonify({
+        'message': 'College created. Activation email sent.' if sent else email_warning,
+        'college': college.to_dict(),
+        'email_warning': email_warning,
+    }), 201
 
 
 @super_admin_bp.patch('/colleges/<int:college_id>')
@@ -103,10 +167,54 @@ def update_college(college_id):
     if 'package_id' in data:
         college.package_id = data['package_id']
     if 'is_active' in data:
-        college.is_active = data['is_active']
+        new_status = bool(data['is_active'])
+        college.is_active = new_status
+        # Cascade to all users in this college
+        User.query.filter_by(college_id=college.id).update({'is_active': new_status})
+    if 'allowed_domain_ids' in data:
+        ids = data['allowed_domain_ids']
+        college.allowed_domain_ids = ids if isinstance(ids, list) else None
+    if 'allowed_course_ids' in data:
+        ids = data['allowed_course_ids']
+        college.allowed_course_ids = ids if isinstance(ids, list) else None
 
     db.session.commit()
     return jsonify({'message': 'College updated', 'college': college.to_dict()}), 200
+
+
+@super_admin_bp.delete('/colleges/<int:college_id>')
+@role_required('super_admin')
+def delete_college(college_id):
+    college = College.query.get_or_404(college_id)
+
+    # Purge every user's dependent rows first
+    user_ids = [r[0] for r in db.session.execute(
+        text("SELECT id FROM users WHERE college_id = :cid"), {"cid": college_id}
+    ).fetchall()]
+    for uid in user_ids:
+        _purge_user_records(uid)
+
+    # Clean up any college-scoped posts left (e.g. admin posts not caught above)
+    cid = {"cid": college_id}
+    db.session.execute(text(
+        "DELETE FROM comment_likes WHERE comment_id IN "
+        "(SELECT id FROM (SELECT id FROM comments "
+        " WHERE post_id IN (SELECT id FROM (SELECT id FROM posts WHERE college_id = :cid) AS p)) AS c)"
+    ), cid)
+    db.session.execute(text(
+        "DELETE FROM comments WHERE post_id IN "
+        "(SELECT id FROM (SELECT id FROM posts WHERE college_id = :cid) AS sub)"
+    ), cid)
+    db.session.execute(text(
+        "DELETE FROM post_likes WHERE post_id IN "
+        "(SELECT id FROM (SELECT id FROM posts WHERE college_id = :cid) AS sub)"
+    ), cid)
+    db.session.execute(text("DELETE FROM posts WHERE college_id = :cid"), cid)
+
+    db.session.execute(text("DELETE FROM users WHERE college_id = :cid"), cid)
+    db.session.delete(college)
+    db.session.commit()
+    return jsonify({'message': 'College deleted'}), 200
 
 
 @super_admin_bp.post('/colleges/<int:college_id>/resend-activation')
@@ -121,7 +229,9 @@ def resend_activation(college_id):
     college.activation_token = activation_token
     db.session.commit()
 
-    send_activation_email(admin.email, admin.name, college.name, activation_token)
+    sent = send_activation_email(admin.email, admin.name, college.name, activation_token)
+    if not sent:
+        return jsonify({'error': 'Failed to send activation email. Check server mail configuration.'}), 500
     return jsonify({'message': 'Activation email resent'}), 200
 
 
@@ -194,6 +304,27 @@ def create_student():
     return jsonify({'message': 'Student created', 'student': student.to_dict()}), 201
 
 
+@super_admin_bp.patch('/students/<int:student_id>')
+@role_required('super_admin')
+def update_student(student_id):
+    student = User.query.filter_by(id=student_id, role='student').first_or_404()
+    data = request.get_json(silent=True) or {}
+    if 'is_active' in data:
+        student.is_active = bool(data['is_active'])
+    db.session.commit()
+    return jsonify({'message': 'Student updated', 'student': student.to_dict()}), 200
+
+
+@super_admin_bp.delete('/students/<int:student_id>')
+@role_required('super_admin')
+def delete_student(student_id):
+    student = User.query.filter_by(id=student_id, role='student').first_or_404()
+    _purge_user_records(student_id)
+    db.session.delete(student)
+    db.session.commit()
+    return jsonify({'message': 'Student deleted'}), 200
+
+
 @super_admin_bp.post('/students/bulk-upload')
 @role_required('super_admin')
 def bulk_upload_students():
@@ -260,6 +391,16 @@ def bulk_upload_students():
         'skipped': skipped,
         'parse_errors': errors,
     }), 201
+
+
+# --- Courses (for super-admin course selector) ---
+
+@super_admin_bp.get('/courses')
+@role_required('super_admin')
+def list_courses():
+    from app.models.learn import Course
+    courses = Course.query.filter_by(is_active=True).order_by(Course.order).all()
+    return jsonify([{'id': c.id, 'title': c.title, 'category': c.category, 'icon_color': c.icon_color} for c in courses]), 200
 
 
 # --- Packages ---

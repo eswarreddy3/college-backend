@@ -16,14 +16,17 @@ def get_courses():
 
     courses = Course.query.filter_by(is_active=True).order_by(Course.order).all()
 
+    # College-level course restriction (None = all accessible)
+    college = g.current_user.college
+    allowed_course_ids = college.allowed_course_ids if college else None
+
     # Completed lesson IDs for this user
     completed = {
         p.lesson_id
         for p in UserLessonProgress.query.filter_by(user_id=user_id).all()
     }
 
-    # Which courses are unlocked: course is locked if its prerequisite has 0 completions
-    # Build a set of course IDs where user completed ALL lessons
+    # Courses the user has fully completed (for prerequisite checks)
     completed_courses = set()
     for c in courses:
         active_lessons = [l for l in c.lessons if l.is_active]
@@ -35,8 +38,13 @@ def get_courses():
         lessons_completed = sum(
             1 for l in c.lessons if l.is_active and l.id in completed
         )
-        is_locked = bool(c.prerequisite_id and c.prerequisite_id not in completed_courses)
-        result.append(c.to_dict(lessons_completed=lessons_completed, is_locked=is_locked))
+        # Plan lock takes priority over prerequisite lock
+        if allowed_course_ids is not None and c.id not in allowed_course_ids:
+            result.append(c.to_dict(lessons_completed=lessons_completed, is_locked=True, lock_reason='plan'))
+        elif c.prerequisite_id and c.prerequisite_id not in completed_courses:
+            result.append(c.to_dict(lessons_completed=lessons_completed, is_locked=True, lock_reason='prerequisite'))
+        else:
+            result.append(c.to_dict(lessons_completed=lessons_completed, is_locked=False))
 
     return jsonify(result), 200
 
@@ -50,6 +58,11 @@ def get_course(course_id):
     course = Course.query.filter_by(id=course_id, is_active=True).first()
     if not course:
         return jsonify({'error': 'Course not found'}), 404
+
+    college = g.current_user.college
+    allowed_course_ids = college.allowed_course_ids if college else None
+    if allowed_course_ids is not None and course_id not in allowed_course_ids:
+        return jsonify({'error': 'This course is not available in your college plan'}), 403
 
     completed = {
         p.lesson_id
@@ -77,6 +90,11 @@ def complete_lesson(lesson_id):
     lesson = Lesson.query.get(lesson_id)
     if not lesson or not lesson.is_active:
         return jsonify({'error': 'Lesson not found'}), 404
+
+    college = g.current_user.college
+    allowed_course_ids = college.allowed_course_ids if college else None
+    if allowed_course_ids is not None and lesson.course_id not in allowed_course_ids:
+        return jsonify({'error': 'This course is not available in your college plan'}), 403
 
     existing = UserLessonProgress.query.filter_by(
         user_id=user.id, lesson_id=lesson_id

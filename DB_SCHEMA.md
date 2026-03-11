@@ -3,7 +3,7 @@
 > **Database**: MySQL
 > **ORM**: Flask-SQLAlchemy
 > **Migrations**: Alembic (Flask-Migrate)
-> **Migration head**: `b2c3d4e5f6a7`
+> **Migration head**: `f6a7b8c9d0e1`
 
 ---
 
@@ -99,6 +99,7 @@ Subscription plans assigned to colleges.
 |--------|------|-------------|-------------|
 | `id` | INT | PK, AUTO_INCREMENT | |
 | `name` | VARCHAR(100) | NOT NULL | Plan name (e.g. "Basic", "Pro") |
+| `plan_type` | VARCHAR(50) | NULLABLE | `free` / `base` / `pro` / `enterprise` |
 | `price` | DECIMAL(10,2) | DEFAULT 0 | Price in INR |
 | `features` | JSON | | List of feature strings |
 | `is_active` | BOOLEAN | DEFAULT TRUE | |
@@ -118,6 +119,8 @@ Colleges registered on the platform.
 | `is_active` | BOOLEAN | DEFAULT TRUE | |
 | `activation_token` | VARCHAR(255) | UNIQUE | Token for college activation email |
 | `activated_at` | DATETIME | NULLABLE | When college was activated |
+| `allowed_domain_ids` | JSON | NULLABLE | `NULL` = all domains accessible; `[]` = all locked; `["id1","id2"]` = only those unlocked |
+| `allowed_course_ids` | JSON | NULLABLE | `NULL` = all courses accessible; `[]` = all locked; `["id1","id2"]` = only those unlocked |
 | `created_at` | DATETIME | | |
 
 ---
@@ -536,7 +539,10 @@ Interview and preparation tips per company.
 | `8ccad5e073f0` | Add MCQ tables |
 | `7cf3584e9d27` | Add company prep tables |
 | `a1b2c3d4e5f6` | Add domain tables |
-| `b2c3d4e5f6a7` | Add feed tables ← **current head** |
+| `b2c3d4e5f6a7` | Add feed tables |
+| `c3d4e5f6a7b8` | Add `plan_type` to packages |
+| `e5f6a7b8c9d0` | Add `allowed_domain_ids` to colleges |
+| `f6a7b8c9d0e1` | Add `allowed_course_ids` to colleges ← **current head** |
 
 ---
 
@@ -549,3 +555,4 @@ Interview and preparation tips per company.
 - **Idempotent likes** — `UNIQUE(post_id, user_id)` and `UNIQUE(comment_id, user_id)` constraints prevent duplicate likes; the API toggles on conflict.
 - **Idempotent lesson completion** — `UNIQUE(user_id, lesson_id)` on `user_lesson_progress` prevents duplicate point awards.
 - **Slug PKs for courses** — `courses.id` is a human-readable slug (`"python"`, `"sql"`) for readability in API routes and foreign keys.
+- **College access control** — `colleges.allowed_domain_ids` and `colleges.allowed_course_ids` are JSON arrays. `NULL` = unrestricted (backward-compatible), `[]` = everything locked, `["id1","id2"]` = only listed items accessible. Plan-locked content returns `lock_reason: "plan"` in API responses; prerequisite-locked returns `lock_reason: "prerequisite"`.
