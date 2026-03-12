@@ -30,7 +30,7 @@ class College(db.Model):
             'allowed_domain_ids': self.allowed_domain_ids,
             'allowed_course_ids': self.allowed_course_ids,
             'is_active': self.is_active,
-            'activated_at': self.activated_at.isoformat() if self.activated_at else None,
+            'activated_at': self.activated_at.replace(tzinfo=timezone.utc).isoformat() if self.activated_at else None,
             'student_count': len([u for u in self.users if u.role == 'student']),
-            'created_at': self.created_at.isoformat(),
+            'created_at': self.created_at.replace(tzinfo=timezone.utc).isoformat(),
         }

@@ -38,7 +38,7 @@ def get_students():
     three_days_ago = datetime.now(timezone.utc) - timedelta(days=3)
     for u in pagination.items:
         d = u.to_dict()
-        d['last_active'] = u.last_active.isoformat() if u.last_active else None
+        d['last_active'] = u.last_active.replace(tzinfo=timezone.utc).isoformat() if u.last_active else None
         d['is_inactive'] = (
             u.last_active is None or
             (u.last_active.replace(tzinfo=timezone.utc) if u.last_active.tzinfo is None else u.last_active) < three_days_ago
@@ -113,7 +113,7 @@ def get_analytics():
                 'branch': u.branch,
                 'section': u.section,
                 'roll_number': u.roll_number,
-                'last_active': u.last_active.isoformat() if u.last_active else None,
+                'last_active': u.last_active.replace(tzinfo=timezone.utc).isoformat() if u.last_active else None,
             }
             for u in inactive_students
         ],

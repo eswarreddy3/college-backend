@@ -50,8 +50,10 @@ def generate_activation_token() -> str:
 
 
 def update_streak(user_id: int) -> None:
-    """Call after any user activity. Updates current/longest streak in user_streaks table."""
+    """Call after any user activity. Updates current/longest streak in user_streaks table
+    and syncs users.streak so the sidebar and admin dashboard always see the real value."""
     from app.models.streak import UserStreak
+    from app.models.user import User
     from app.extensions import db
 
     today = datetime.now(timezone.utc).date()
@@ -65,6 +67,10 @@ def update_streak(user_id: int) -> None:
             last_activity_date=today,
             updated_at=datetime.now(timezone.utc),
         ))
+        # Sync to users table
+        user = User.query.get(user_id)
+        if user:
+            user.streak = 1
         return
 
     if row.last_activity_date == today:
@@ -80,3 +86,8 @@ def update_streak(user_id: int) -> None:
 
     row.last_activity_date = today
     row.updated_at = datetime.now(timezone.utc)
+
+    # Sync current_streak back to users.streak
+    user = User.query.get(user_id)
+    if user:
+        user.streak = row.current_streak

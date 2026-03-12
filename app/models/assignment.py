@@ -56,5 +56,5 @@ class AssignmentAttempt(db.Model):
             'score': self.score,
             'total_questions': self.total_questions,
             'correct_count': self.correct_count,
-            'completed_at': self.completed_at.isoformat(),
+            'completed_at': self.completed_at.replace(tzinfo=timezone.utc).isoformat(),
         }

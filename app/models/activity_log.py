@@ -16,5 +16,5 @@ class ActivityLog(db.Model):
             'id': self.id,
             'action': self.action,
             'details': self.details,
-            'created_at': self.created_at.isoformat(),
+            'created_at': self.created_at.replace(tzinfo=timezone.utc).isoformat(),
         }

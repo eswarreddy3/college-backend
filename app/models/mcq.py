@@ -55,5 +55,5 @@ class MCQAttempt(db.Model):
             'selected_answer': self.selected_answer,
             'is_correct': self.is_correct,
             'points_earned': self.points_earned,
-            'attempted_at': self.attempted_at.isoformat(),
+            'attempted_at': self.attempted_at.replace(tzinfo=timezone.utc).isoformat(),
         }

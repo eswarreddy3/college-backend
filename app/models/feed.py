@@ -57,8 +57,8 @@ class Post(db.Model):
                 'branch': self.author.branch,
                 'passout_year': self.author.passout_year,
             },
-            'created_at': self.created_at.isoformat(),
-            'updated_at': self.updated_at.isoformat(),
+            'created_at': self.created_at.replace(tzinfo=timezone.utc).isoformat(),
+            'updated_at': self.updated_at.replace(tzinfo=timezone.utc).isoformat(),
         }
 
 
@@ -106,7 +106,7 @@ class Comment(db.Model):
                 'name': self.author.name,
                 'branch': self.author.branch,
             },
-            'created_at': self.created_at.isoformat(),
+            'created_at': self.created_at.replace(tzinfo=timezone.utc).isoformat(),
         }
 
 

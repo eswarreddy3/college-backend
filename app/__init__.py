@@ -25,7 +25,7 @@ def create_app(config_name: str = None) -> Flask:
 
     # Import models so SQLAlchemy knows about them
     with app.app_context():
-        from app.models import College, User, Package, RefreshToken, CodingProblem, CodingSubmission, ActivityLog, MCQQuestion, MCQAttempt, Course, Lesson, UserLessonProgress, AssignmentQuestion, AssignmentAttempt, Company, CompanyHiringRound, CompanyPackage, CompanyAptitudeQuestion, CompanyCodingQuestion, CompanyTip, Domain, DomainCourse, Post, PostLike, Comment, CommentLike  # noqa
+        from app.models import College, User, Package, RefreshToken, CodingProblem, CodingSubmission, ActivityLog, MCQQuestion, MCQAttempt, Course, Lesson, UserLessonProgress, AssignmentQuestion, AssignmentAttempt, Company, CompanyHiringRound, CompanyPackage, CompanyAptitudeQuestion, CompanyCodingQuestion, CompanyTip, Domain, DomainCourse, Post, PostLike, Comment, CommentLike, AptitudeQuestion, AptitudeAttempt  # noqa
         from app.models.streak import UserStreak  # noqa
 
     # Register blueprints

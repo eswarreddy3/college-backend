@@ -60,5 +60,5 @@ class CodingSubmission(db.Model):
             'language': self.language,
             'status': self.status,
             'runtime_ms': self.runtime_ms,
-            'submitted_at': self.submitted_at.isoformat(),
+            'submitted_at': self.submitted_at.replace(tzinfo=timezone.utc).isoformat(),
         }
