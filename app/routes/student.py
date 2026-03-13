@@ -23,7 +23,7 @@ def update_profile():
     user = g.current_user
     data = request.get_json(silent=True) or {}
 
-    updatable = ['name', 'phone', 'linkedin', 'branch', 'section',
+    updatable = ['name', 'phone', 'linkedin', 'github', 'branch', 'section',
                  'roll_number', 'passout_year',
                  'email_notifications', 'assignment_reminders', 'leaderboard_updates']
 
@@ -129,3 +129,18 @@ def leaderboard():
         })
 
     return jsonify(result), 200
+
+
+@student_bp.get('/resume')
+@role_required('student', 'college_admin', 'super_admin')
+def get_resume():
+    return jsonify({'resume_data': g.current_user.resume_data or {}}), 200
+
+
+@student_bp.put('/resume')
+@role_required('student', 'college_admin', 'super_admin')
+def save_resume():
+    data = request.get_json(silent=True) or {}
+    g.current_user.resume_data = data
+    db.session.commit()
+    return jsonify({'message': 'Resume saved'}), 200

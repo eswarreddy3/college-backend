@@ -3,7 +3,7 @@ import secrets
 from typing import Optional
 
 
-REQUIRED_COLUMNS = {'name', 'email', 'branch', 'section', 'roll_number', 'passout_year'}
+REQUIRED_COLUMNS = {'name', 'email', 'branch', 'roll_number', 'college'}
 
 
 def parse_student_csv(file_path: str) -> tuple[list[dict], list[str]]:
@@ -48,8 +48,9 @@ def parse_student_csv(file_path: str) -> tuple[list[dict], list[str]]:
             'name': name,
             'email': email.lower(),
             'branch': str(row.get('branch', '')).strip(),
-            'section': str(row.get('section', '')).strip(),
             'roll_number': str(row.get('roll_number', '')).strip(),
+            'college': str(row.get('college', '')).strip(),
+            'section': str(row.get('section', '')).strip(),
             'passout_year': _safe_int(row.get('passout_year')),
             'temp_password': secrets.token_urlsafe(8),
         })

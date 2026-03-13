@@ -21,6 +21,11 @@ class User(db.Model):
     passout_year = db.Column(db.Integer, nullable=True)
     phone = db.Column(db.String(20), nullable=True)
     linkedin = db.Column(db.String(255), nullable=True)
+    github = db.Column(db.String(255), nullable=True)
+    password_reset_token = db.Column(db.String(255), nullable=True)
+    password_reset_expires = db.Column(db.DateTime, nullable=True)
+    resume_data = db.Column(db.JSON, nullable=True)
+
     points = db.Column(db.Integer, default=0)
     streak = db.Column(db.Integer, default=0)
     last_active = db.Column(db.DateTime, nullable=True)
@@ -50,6 +55,7 @@ class User(db.Model):
             'passout_year': self.passout_year,
             'phone': self.phone,
             'linkedin': self.linkedin,
+            'github': self.github,
             'points': self.points,
             'streak': self.streak,
             'is_active': self.is_active,

@@ -59,6 +59,37 @@ def send_reminder_email(student_email: str, student_name: str):
     return True
 
 
+def send_password_reset_email(email: str, name: str, reset_token: str) -> bool:
+    frontend_url = current_app.config['FRONTEND_URL']
+    reset_link = f"{frontend_url}/reset-password?token={reset_token}"
+
+    msg = Message(
+        subject="Reset your Fynity password",
+        recipients=[email],
+    )
+    msg.html = f"""
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #00D4C8;">Password Reset Request</h2>
+      <p>Hi {name},</p>
+      <p>We received a request to reset your Fynity password. Click the button below to set a new one:</p>
+      <a href="{reset_link}"
+         style="display:inline-block;padding:12px 24px;background:#00D4C8;color:#000;
+                text-decoration:none;border-radius:6px;font-weight:bold;">
+        Reset Password
+      </a>
+      <p style="color:#666;margin-top:24px;font-size:13px;">
+        This link expires in 1 hour. If you didn't request a password reset, you can safely ignore this email.
+      </p>
+    </div>
+    """
+    try:
+        mail.send(msg)
+    except Exception as e:
+        current_app.logger.error(f"Failed to send reset email to {email}: {e}")
+        return False
+    return True
+
+
 def send_student_welcome_email(student_email: str, student_name: str, temp_password: str):
     frontend_url = current_app.config['FRONTEND_URL']
 

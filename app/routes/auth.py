@@ -5,10 +5,11 @@ from app.models.refresh_token import RefreshToken
 from app.utils.helpers import (
     verify_password, hash_password,
     generate_access_token, generate_refresh_token, decode_token,
-    update_streak,
+    update_streak, generate_activation_token,
 )
 from app.utils.decorators import jwt_required
-from datetime import datetime, timezone
+from app.services.email_service import send_password_reset_email
+from datetime import datetime, timezone, timedelta
 import jwt as pyjwt
 
 auth_bp = Blueprint('auth', __name__)
@@ -66,6 +67,9 @@ def complete_onboarding():
     linkedin = data.get('linkedin_url') or data.get('linkedin', '')
     if linkedin is not None:
         user.linkedin = linkedin.strip()
+    github = data.get('github_url') or data.get('github', '')
+    if github is not None:
+        user.github = github.strip()
     if 'branch' in data:
         user.branch = data['branch'].strip()
     if 'section' in data:
@@ -181,3 +185,67 @@ def activate():
     db.session.commit()
 
     return jsonify({'message': 'Account activated. You can now log in.'}), 200
+
+
+@auth_bp.post('/forgot-password')
+def forgot_password():
+    data = request.get_json(silent=True) or {}
+    email = data.get('email', '').strip().lower()
+    if not email:
+        return jsonify({'error': 'Email is required'}), 400
+
+    user = User.query.filter_by(email=email).first()
+    # Always return 200 to avoid user enumeration
+    if not user or not user.is_active:
+        return jsonify({'message': 'If that email exists, a reset link has been sent.'}), 200
+
+    token = generate_activation_token()
+    user.password_reset_token = token
+    user.password_reset_expires = datetime.utcnow() + timedelta(hours=1)
+    db.session.commit()
+
+    send_password_reset_email(user.email, user.name, token)
+    return jsonify({'message': 'If that email exists, a reset link has been sent.'}), 200
+
+
+@auth_bp.post('/reset-password')
+def reset_password():
+    data = request.get_json(silent=True) or {}
+    token = data.get('token', '').strip()
+    new_password = data.get('new_password', '')
+
+    if not token:
+        return jsonify({'error': 'Token is required'}), 400
+    if not new_password or len(new_password) < 8:
+        return jsonify({'error': 'Password must be at least 8 characters'}), 400
+
+    user = User.query.filter_by(password_reset_token=token).first()
+    if not user:
+        return jsonify({'error': 'Invalid or expired reset link'}), 400
+
+    if user.password_reset_expires < datetime.utcnow():
+        user.password_reset_token = None
+        user.password_reset_expires = None
+        db.session.commit()
+        return jsonify({'error': 'Reset link has expired. Please request a new one.'}), 400
+
+    user.password_hash = hash_password(new_password)
+    user.password_reset_token = None
+    user.password_reset_expires = None
+    db.session.commit()
+
+    return jsonify({'message': 'Password reset successfully. You can now log in.'}), 200
+
+
+@auth_bp.get('/reset-password')
+def validate_reset_token():
+    """Validate reset token before showing the reset form."""
+    token = request.args.get('token', '')
+    if not token:
+        return jsonify({'error': 'Token is required'}), 400
+
+    user = User.query.filter_by(password_reset_token=token).first()
+    if not user or user.password_reset_expires < datetime.utcnow():
+        return jsonify({'error': 'Invalid or expired reset link'}), 400
+
+    return jsonify({'message': 'Token valid'}), 200

@@ -268,9 +268,9 @@ def list_students():
 def create_student():
     data = request.get_json(silent=True) or {}
 
-    required = ['name', 'email', 'college_id']
+    required = ['name', 'email', 'college_id', 'roll_number', 'branch']
     for field in required:
-        if not data.get(field):
+        if not data.get(field) and data.get(field) != 0:
             return jsonify({'error': f'{field} is required'}), 400
 
     if User.query.filter_by(email=data['email'].lower()).first():
@@ -289,10 +289,8 @@ def create_student():
         password_hash=hash_password(temp_password),
         role='student',
         college_id=data['college_id'],
-        branch=data.get('branch', ''),
-        section=data.get('section', ''),
-        roll_number=data.get('roll_number', ''),
-        passout_year=data.get('passout_year'),
+        branch=data['branch'].strip(),
+        roll_number=data['roll_number'].strip(),
         is_active=True,
         first_login=True,
     )
@@ -332,17 +330,9 @@ def bulk_upload_students():
         return jsonify({'error': 'No file provided'}), 400
 
     file = request.files['file']
-    college_id = request.form.get('college_id', type=int)
 
     if not file.filename or not _allowed_file(file.filename):
         return jsonify({'error': 'Invalid file type. Use CSV or XLSX.'}), 400
-
-    if not college_id:
-        return jsonify({'error': 'college_id is required'}), 400
-
-    college = College.query.get(college_id)
-    if not college:
-        return jsonify({'error': 'College not found'}), 404
 
     upload_folder = current_app.config['UPLOAD_FOLDER']
     os.makedirs(upload_folder, exist_ok=True)
@@ -359,10 +349,24 @@ def bulk_upload_students():
     if errors and not students_data:
         return jsonify({'error': 'CSV parsing failed', 'details': errors}), 400
 
+    # Cache college lookups to avoid repeated DB hits
+    college_cache: dict[str, int | None] = {}
+
     created = []
     skipped = []
     for s in students_data:
         if User.query.filter_by(email=s['email']).first():
+            skipped.append(s['email'])
+            continue
+
+        college_name = s['college'].strip()
+        if college_name not in college_cache:
+            c = College.query.filter(College.name.ilike(college_name)).first()
+            college_cache[college_name] = c.id if c else None
+
+        resolved_college_id = college_cache[college_name]
+        if not resolved_college_id:
+            errors.append(f"College not found: '{college_name}' (row for {s['email']})")
             skipped.append(s['email'])
             continue
 
@@ -371,11 +375,11 @@ def bulk_upload_students():
             email=s['email'],
             password_hash=hash_password(s['temp_password']),
             role='student',
-            college_id=college_id,
+            college_id=resolved_college_id,
             branch=s['branch'],
-            section=s['section'],
             roll_number=s['roll_number'],
-            passout_year=s['passout_year'],
+            section=s.get('section') or None,
+            passout_year=s.get('passout_year') or None,
             is_active=True,
             first_login=True,
         )
@@ -386,7 +390,7 @@ def bulk_upload_students():
     db.session.commit()
 
     return jsonify({
-        'message': f'{len(created)} students created, {len(skipped)} skipped (already exist)',
+        'message': f'{len(created)} students created, {len(skipped)} skipped',
         'created': len(created),
         'skipped': skipped,
         'parse_errors': errors,
