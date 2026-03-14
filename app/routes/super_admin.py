@@ -177,6 +177,44 @@ def update_college(college_id):
     if 'allowed_course_ids' in data:
         ids = data['allowed_course_ids']
         college.allowed_course_ids = ids if isinstance(ids, list) else None
+    if 'linkedin_url' in data:
+        college.linkedin_url = data['linkedin_url'] or None
+    if 'linkedin_post_embeds' in data:
+        embeds = data['linkedin_post_embeds']
+        if isinstance(embeds, list):
+            cleaned = []
+            for u in embeds:
+                if not u:
+                    continue
+                # If user pasted full <iframe ...> HTML, extract the src value
+                import re as _re
+                src_match = _re.search(r'src=["\']([^"\']+)["\']', u)
+                if src_match:
+                    cleaned.append(src_match.group(1))
+                elif u.startswith('http'):
+                    cleaned.append(u.strip())
+            college.linkedin_post_embeds = cleaned or None
+        else:
+            college.linkedin_post_embeds = None
+    if 'instagram_url' in data:
+        college.instagram_url = data['instagram_url'] or None
+    if 'instagram_post_embeds' in data:
+        embeds = data['instagram_post_embeds']
+        if isinstance(embeds, list):
+            import re as _re
+            cleaned = []
+            for u in embeds:
+                if not u:
+                    continue
+                # Accept full post URL (https://www.instagram.com/p/CODE/) or just the code
+                src_match = _re.search(r'src=["\']([^"\']+)["\']', u)
+                if src_match:
+                    cleaned.append(src_match.group(1))
+                elif u.strip().startswith('http'):
+                    cleaned.append(u.strip())
+            college.instagram_post_embeds = cleaned or None
+        else:
+            college.instagram_post_embeds = None
 
     db.session.commit()
     return jsonify({'message': 'College updated', 'college': college.to_dict()}), 200

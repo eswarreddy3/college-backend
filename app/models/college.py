@@ -11,6 +11,12 @@ class College(db.Model):
     package_id = db.Column(db.Integer, db.ForeignKey('packages.id'), nullable=True)
     allowed_domain_ids = db.Column(db.JSON, nullable=True)   # None = all domains accessible
     allowed_course_ids = db.Column(db.JSON, nullable=True)   # None = all courses accessible
+    linkedin_url = db.Column(db.String(500), nullable=True)
+    linkedin_post_embeds = db.Column(db.JSON, nullable=True)   # list of embed URLs
+    instagram_url = db.Column(db.String(500), nullable=True)
+    instagram_post_embeds = db.Column(db.JSON, nullable=True)  # list of post URLs (admin-curated)
+    instagram_cache = db.Column(db.JSON, nullable=True)        # cached {profile, posts}
+    instagram_cache_at = db.Column(db.DateTime, nullable=True)
     is_active = db.Column(db.Boolean, default=True)
     activation_token = db.Column(db.String(255), unique=True, nullable=True)
     activated_at = db.Column(db.DateTime, nullable=True)
@@ -29,6 +35,10 @@ class College(db.Model):
             'plan_type': self.package.plan_type if self.package else None,
             'allowed_domain_ids': self.allowed_domain_ids,
             'allowed_course_ids': self.allowed_course_ids,
+            'linkedin_url': self.linkedin_url,
+            'linkedin_post_embeds': self.linkedin_post_embeds or [],
+            'instagram_url': self.instagram_url,
+            'instagram_post_embeds': self.instagram_post_embeds or [],
             'is_active': self.is_active,
             'activated_at': self.activated_at.replace(tzinfo=timezone.utc).isoformat() if self.activated_at else None,
             'student_count': len([u for u in self.users if u.role == 'student']),

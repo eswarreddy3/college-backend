@@ -124,6 +124,69 @@ def get_analytics():
     }), 200
 
 
+@admin_bp.get('/college-social')
+@role_required('college_admin')
+def get_college_social():
+    college = g.current_user.college
+    if not college:
+        return jsonify({}), 200
+    return jsonify({
+        'linkedin_url': college.linkedin_url,
+        'linkedin_post_embeds': college.linkedin_post_embeds or [],
+        'instagram_url': college.instagram_url,
+        'instagram_post_embeds': college.instagram_post_embeds or [],
+    }), 200
+
+
+@admin_bp.patch('/college-social')
+@role_required('college_admin')
+def update_college_social():
+    college = g.current_user.college
+    if not college:
+        return jsonify({'error': 'College not found'}), 404
+
+    data = request.get_json()
+    import re as _re
+
+    if 'linkedin_url' in data:
+        college.linkedin_url = data['linkedin_url'] or None
+    if 'linkedin_post_embeds' in data:
+        embeds = data['linkedin_post_embeds']
+        if isinstance(embeds, list):
+            cleaned = []
+            for u in embeds:
+                if not u:
+                    continue
+                src_match = _re.search(r'src=["\']([^"\']+)["\']', u)
+                if src_match:
+                    cleaned.append(src_match.group(1))
+                elif u.strip().startswith('http'):
+                    cleaned.append(u.strip())
+            college.linkedin_post_embeds = cleaned or None
+        else:
+            college.linkedin_post_embeds = None
+    if 'instagram_url' in data:
+        college.instagram_url = data['instagram_url'] or None
+    if 'instagram_post_embeds' in data:
+        embeds = data['instagram_post_embeds']
+        if isinstance(embeds, list):
+            cleaned = []
+            for u in embeds:
+                if not u:
+                    continue
+                src_match = _re.search(r'src=["\']([^"\']+)["\']', u)
+                if src_match:
+                    cleaned.append(src_match.group(1))
+                elif u.strip().startswith('http'):
+                    cleaned.append(u.strip())
+            college.instagram_post_embeds = cleaned or None
+        else:
+            college.instagram_post_embeds = None
+
+    db.session.commit()
+    return jsonify({'message': 'Social links updated'}), 200
+
+
 @admin_bp.post('/students/<int:student_id>/remind')
 @role_required('college_admin')
 def send_reminder(student_id):
